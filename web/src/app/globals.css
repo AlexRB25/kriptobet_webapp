@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-ink: #0a0d0c;
+  --color-panel: #121816;
+  --color-raised: #1b2421;
+  --color-line: #26322e;
+  --color-muted: #8fa39b;
+  --color-brand: #1fdf7a;
+  --color-brand-deep: #0f7a43;
+  --color-gold: #f5b83d;
+  --color-bad: #f87171;
+  /* Roulette and card suits. */
+  --color-red: #e0373f;
+}
+
+body {
+  background: var(--color-ink);
+  color: #f2f5f4;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+h1 {
+  @apply text-2xl font-bold tracking-tight;
+}
+h2 {
+  @apply text-lg font-semibold;
+}
+
+.glow {
+  background: radial-gradient(60% 70% at 30% 30%, rgb(31 223 122 / 0.22), transparent 70%);
+}
+
+.btn {
+  @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-raised px-3.5 py-2 text-sm font-semibold text-white transition select-none hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-50;
+}
+.btn-primary {
+  @apply bg-brand text-ink;
+}
+.btn-gold {
+  @apply bg-gold text-ink;
+}
+.btn-danger {
+  @apply bg-bad/15 text-bad;
+}
+.btn-lg {
+  @apply px-5 py-3 text-base;
+}
+.card {
+  @apply rounded-xl border border-line bg-panel p-4;
+}
+.input {
+  @apply w-full rounded-lg border border-line bg-ink px-3 py-2 text-sm text-white outline-none placeholder:text-muted/60 focus:border-brand;
+}
+.label {
+  @apply flex flex-col gap-1 text-xs font-medium text-muted;
+}
+.error {
+  @apply rounded-lg bg-bad/15 px-3 py-2 text-sm text-bad;
+}
+.notice {
+  @apply rounded-lg bg-brand/15 px-3 py-2 text-sm text-brand;
+}
+.warn {
+  @apply rounded-lg bg-gold/15 px-3 py-2 text-sm text-gold;
+}
+.chip {
+  @apply cursor-pointer rounded-full border border-line bg-panel px-3 py-1.5 text-sm font-medium whitespace-nowrap text-muted transition hover:text-white;
+}
+.chip-on {
+  @apply border-brand bg-brand/15 text-brand;
+}
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Playing card and slot reel entrances. */
+@keyframes pop {
+  from {
+    transform: translateY(-8px) scale(0.92);
+    opacity: 0;
+  }
+}
+.pop {
+  animation: pop 0.22s ease-out;
+}
+@keyframes reel {
+  from {
+    transform: translateY(-40%);
+    filter: blur(3px);
+  }
+}
+.reel-spin {
+  animation: reel 0.12s linear infinite;
+}
