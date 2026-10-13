@@ -8,8 +8,11 @@ import type {
   MinesState,
   RouletteBet,
   RouletteState,
+  SlotSymbol,
+  SlotWin,
   SlotsState,
-} from "./types";
+} from "./types.ts";
+import { SLOT_LINES, SLOT_PAYS } from "./types.ts";
 
 // Pure game rules. Every function takes its randomness as a parameter, so the API passes a
 // cryptographic generator and the tests pass a scripted one. Nothing here touches money in the
@@ -126,21 +129,16 @@ export function playRoulette(bets: RouletteBet[], rng: Rng): { state: RouletteSt
 }
 
 // ───────────── Slots ─────────────
+// Five reels, three rows, five fixed paylines. The bet is split evenly between the lines; a line
+// pays for two or more equal symbols starting from the left reel.
 
-/** How many times each symbol appears on a reel, and what three or two (from the left) of it pay per unit bet. */
-export const SLOT_SYMBOLS = [
-  { symbol: "🍒", count: 6, three: 6, two: 2 },
-  { symbol: "🍋", count: 6, three: 9, two: 2 },
-  { symbol: "🔔", count: 5, three: 14, two: 3 },
-  { symbol: "⭐", count: 4, three: 25, two: 4 },
-  { symbol: "💎", count: 3, three: 50, two: 5 },
-  { symbol: "7️⃣", count: 2, three: 150, two: 10 },
-] as const;
+/** How many times each symbol appears on a reel strip. Together with SLOT_PAYS this sets the return (≈ 96.4 %). */
+export const SLOT_COUNTS: Record<SlotSymbol, number> = { lemon: 6, cherry: 7, orange: 6, bell: 5, star: 4, diamond: 3, seven: 2 };
 
-// Spread so that equal symbols are not neighbours on the strip.
-export const SLOT_STRIP: string[] = (() => {
-  const pools = SLOT_SYMBOLS.map((entry) => ({ symbol: entry.symbol as string, left: entry.count as number }));
-  const strip: string[] = [];
+// Dealt round-robin so that equal symbols are never neighbours on the strip, not even across its ends.
+export const SLOT_STRIP: SlotSymbol[] = (() => {
+  const pools = (Object.keys(SLOT_COUNTS) as SlotSymbol[]).map((symbol) => ({ symbol, left: SLOT_COUNTS[symbol] }));
+  const strip: SlotSymbol[] = [];
   while (pools.some((pool) => pool.left > 0)) {
     for (const pool of pools) {
       if (pool.left > 0) {
@@ -152,20 +150,33 @@ export const SLOT_STRIP: string[] = (() => {
   return strip;
 })();
 
-/** Payout per unit bet of the middle row. */
-export function slotsMultiplier(line: string[]) {
-  const first = SLOT_SYMBOLS.find((entry) => entry.symbol === line[0]);
-  if (!first || line[1] !== line[0]) return 0;
-  return line[2] === line[0] ? first.three : first.two;
+/** What a line pays, in line bets, for `count` equal symbols from the left. */
+export function slotLinePays(symbol: SlotSymbol, count: number) {
+  return count >= 2 ? SLOT_PAYS[symbol][count - 2] : 0;
+}
+
+/** Winning lines of a grid given as five reels of three rows each. */
+export function slotWins(reels: SlotSymbol[][]): SlotWin[] {
+  const wins: SlotWin[] = [];
+  SLOT_LINES.forEach((rows, line) => {
+    const symbol = reels[0][rows[0]];
+    let count = 1;
+    while (count < rows.length && reels[count][rows[count]] === symbol) count++;
+    const pays = slotLinePays(symbol, count);
+    if (pays > 0) wins.push({ line, symbol, count, pays });
+  });
+  return wins;
 }
 
 export function playSlots(rng: Rng): SlotsState {
   const size = SLOT_STRIP.length;
-  const reels = [0, 1, 2].map(() => {
+  const reels = SLOT_LINES[0].map(() => {
     const stop = rng(size);
     return [SLOT_STRIP[(stop + size - 1) % size], SLOT_STRIP[stop], SLOT_STRIP[(stop + 1) % size]];
   });
-  return { reels, multiplier: slotsMultiplier(reels.map((reel) => reel[1])) };
+  const wins = slotWins(reels);
+  // Each line carries a fifth of the bet, so the payout per unit bet is the lines' pays divided by five.
+  return { reels, wins, multiplier: round2(wins.reduce((sum, win) => sum + win.pays, 0) / SLOT_LINES.length) };
 }
 
 // ───────────── Minas ─────────────

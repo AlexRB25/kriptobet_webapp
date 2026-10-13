@@ -56,9 +56,12 @@ el premio se registran en una sola operación de base de datos.
 | Dados | Eliges tu probabilidad (1–95 %); paga 99 ÷ probabilidad | 99 % |
 | Crash | Eliges en cuánto cobrar (1.01×–1000×); ganas si el multiplicador llega | 99 % |
 | Ruleta | Europea, un cero; plenos, docenas, columnas y apuestas simples | 97.3 % |
-| Slots | 3 rodillos, paga la línea central; premio mayor 150× | 96.7 % |
+| Slots | 5 rodillos, 5 líneas de pago fijas; paga desde dos símbolos iguales por la izquierda | 96.4 % |
 | Minas | 25 casillas, 1–24 minas; cobra cuando quieras | 99 % |
 | Blackjack | Baraja infinita, el crupier se planta en 17, blackjack paga 3:2, se puede doblar; sin dividir ni seguro | ≈ 99 % con buena estrategia |
+
+Los gráficos (símbolos, gemas, fichas, cohete) son dibujos SVG propios en `web/src/lib/games/art.ts`, con copia en
+`mobile/src/lib/art.ts`. La web tiene sonidos sintetizados (botón 🔊 en cada juego); la app usa vibración.
 
 Las reglas están en `web/src/lib/games/engine.ts` y sus pruebas (`npm test` en `web/`) comprueban esos retornos.
 Los límites (apuesta mínima y máxima, premio máximo, depósito y retiro mínimos) están en la tabla `settings`.

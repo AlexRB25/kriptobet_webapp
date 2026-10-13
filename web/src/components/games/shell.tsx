@@ -6,7 +6,9 @@ import { useAccount } from "@/lib/account";
 import { api, errorCode } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 import { money, parseAmount, usdt } from "@/lib/format";
+import { artUrl, chipFor, chipStack } from "@/lib/games/art";
 import { GAMES, type GameId, type GameResponse } from "@/lib/games/types";
+import { toggleSound, useSoundOn } from "@/lib/sound";
 
 // Pieces shared by the six game screens.
 
@@ -113,11 +115,12 @@ export function Outcome({ payout, bet, pending }: { payout: number; bet: number;
   );
 }
 
-type FrameProps = { game: GameId; controls: ReactNode; children: ReactNode; rules: ReactNode; error?: string };
+type FrameProps = { game: GameId; controls: ReactNode; children: ReactNode; rules: ReactNode; error?: string; stageClassName?: string };
 
 /** Page layout of a game: controls on the left (below on phones), the table on the right. */
-export function GameFrame({ game, controls, children, rules, error }: FrameProps) {
+export function GameFrame({ game, controls, children, rules, error, stageClassName }: FrameProps) {
   const { settings } = useAccount();
+  const soundOn = useSoundOn();
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
@@ -127,18 +130,64 @@ export function GameFrame({ game, controls, children, rules, error }: FrameProps
         <h1>
           {GAMES[game].emoji} {GAMES[game].title}
         </h1>
+        <button type="button" className="btn ml-auto px-2.5" aria-pressed={soundOn} onClick={toggleSound}>
+          {soundOn ? "🔊" : "🔇"} <span className="sr-only">Sonido</span>
+        </button>
       </div>
       <div className="flex flex-col-reverse gap-4 md:flex-row">
         <section className="card flex flex-col gap-3 md:w-72 md:shrink-0 md:self-start">
           {controls}
           {error && <p className="error">{error}</p>}
         </section>
-        <section className="card flex min-h-80 flex-1 flex-col items-center justify-center gap-4 overflow-hidden">{children}</section>
+        <section className={`flex min-h-96 min-w-0 flex-1 flex-col items-center justify-center gap-4 overflow-hidden rounded-xl border border-line p-4 ${stageClassName ?? "bg-panel"}`}>
+          {children}
+        </section>
       </div>
       <div className="text-xs leading-relaxed text-muted">
         {rules} Premio máximo por jugada: {usdt(settings.max_payout)}. Los resultados se generan en el servidor con un generador aleatorio
         criptográfico.
       </div>
     </div>
+  );
+}
+
+/** One of the drawings of lib/games/art.ts. */
+export function Art({ source, className }: { source: string; className?: string }) {
+  // eslint-disable-next-line @next/next/no-img-element -- an inline SVG data: URL
+  return <img src={artUrl(source)} alt="" draggable={false} className={className} />;
+}
+
+/** A casino chip with its value on it. */
+export function Chip({ amount, size = 36, label }: { amount: number; size?: number; label?: string }) {
+  const chip = chipFor(amount);
+  return (
+    <span
+      className="tabular inline-flex shrink-0 items-center justify-center rounded-full font-black text-white shadow-[0_2px_3px_rgb(0_0_0/0.5)]"
+      style={{
+        width: size,
+        height: size,
+        fontSize: size * 0.3,
+        background: `radial-gradient(circle, ${chip.color} 0 52%, transparent 53%), repeating-conic-gradient(${chip.edge} 0 15deg, ${chip.color} 15deg 45deg)`,
+        border: `2px solid ${chip.color}`,
+      }}>
+      {label ?? (amount >= 1000 ? `${Math.round(amount / 100) / 10}k` : String(Math.round(amount * 100) / 100))}
+    </span>
+  );
+}
+
+/** A bet shown as a small pile of chips. */
+export function ChipStack({ amount, size = 34 }: { amount: number; size?: number }) {
+  const stack = chipStack(amount);
+  return (
+    <span className="relative inline-block" style={{ width: size, height: size + (stack.length - 1) * 4 }}>
+      {stack
+        .slice()
+        .reverse()
+        .map((chip, index, all) => (
+          <span key={index} className="absolute left-0" style={{ bottom: index * 4 }}>
+            <Chip amount={chip.value} size={size} label={index === all.length - 1 ? undefined : ""} />
+          </span>
+        ))}
+    </span>
   );
 }

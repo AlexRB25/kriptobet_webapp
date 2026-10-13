@@ -93,3 +93,70 @@ h2 {
 .reel-spin {
   animation: reel 0.12s linear infinite;
 }
+
+/* ── Casino games ── */
+
+/* Slots: a reel strip falls from `--from` to its resting place, with a small bounce. */
+@keyframes reel-drop {
+  from {
+    transform: translateY(var(--from));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes win-pulse {
+  50% {
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 10px rgb(245 184 61 / 0.9));
+  }
+}
+.win-pulse {
+  animation: win-pulse 0.7s ease-in-out infinite;
+}
+@keyframes marquee-lights {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Cards are dealt from the shoe at the top right of the table. */
+@keyframes card-deal {
+  from {
+    transform: translate(140px, -120px) rotate(25deg);
+    opacity: 0;
+  }
+}
+.card-deal {
+  animation: card-deal 0.35s ease-out both;
+}
+
+/* Mines: a tile turning over. */
+@keyframes tile-flip {
+  from {
+    transform: rotateY(90deg) scale(0.9);
+  }
+}
+.tile-flip {
+  animation: tile-flip 0.25s ease-out;
+}
+@keyframes shake {
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+.shake {
+  animation: shake 0.35s linear;
+}
+
+.felt {
+  background: radial-gradient(120% 90% at 50% 0%, #17804f, #0b4a2f 60%, #072f1f);
+}
+.wood {
+  background: linear-gradient(135deg, #5a3516, #2e1a0a 60%, #4a2b12);
+}

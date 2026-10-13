@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomInt } from "node:crypto";
 import { test } from "node:test";
 import {
+  SLOT_COUNTS,
   SLOT_STRIP,
   actBlackjack,
   cashOutMines,
@@ -14,13 +15,15 @@ import {
   playRoulette,
   revealMine,
   rouletteBetWins,
-  slotsMultiplier,
+  slotLinePays,
+  slotWins,
+  playSlots,
   startMines,
   validRouletteBets,
   BLACKJACK_RETURNS,
   type Rng,
 } from "./engine.ts";
-import type { Card, RouletteBet } from "./types.ts";
+import type { Card, RouletteBet, SlotSymbol } from "./types.ts";
 
 const random: Rng = (max) => randomInt(max);
 /** Generator that returns the given values in order. */
@@ -105,23 +108,50 @@ test("ruleta: suma varias apuestas y rechaza las mal formadas", () => {
   assert.equal(validRouletteBets([]), false);
 });
 
-test("slots: retorno entre 94 % y 97 %", () => {
+test("slots: retorno por línea entre 95 % y 97 %", () => {
+  const symbols = Object.keys(SLOT_COUNTS) as SlotSymbol[];
   const size = SLOT_STRIP.length;
+  // Each line reads one independent symbol per reel, so the return of the game is the return of one line.
   let returned = 0;
   let hits = 0;
-  for (const a of SLOT_STRIP) {
-    for (const b of SLOT_STRIP) {
-      for (const c of SLOT_STRIP) {
-        const multiplier = slotsMultiplier([a, b, c]);
-        returned += multiplier;
-        if (multiplier > 0) hits++;
-      }
+  for (const symbol of symbols) {
+    const p = SLOT_COUNTS[symbol] / size;
+    for (let count = 2; count <= 5; count++) {
+      const chance = count === 5 ? p ** 5 : p ** count * (1 - p);
+      returned += chance * slotLinePays(symbol, count);
+      hits += chance;
     }
   }
-  const rtp = returned / size ** 3;
-  assert.ok(rtp > 0.94 && rtp < 0.97, `rtp ${rtp}`);
-  assert.ok(hits / size ** 3 > 0.15);
-  for (let i = 1; i < size; i++) assert.notEqual(SLOT_STRIP[i], SLOT_STRIP[i - 1]);
+  assert.ok(returned > 0.95 && returned < 0.97, `rtp ${returned}`);
+  assert.ok(hits > 0.12);
+  assert.equal(size, 33);
+  for (let i = 0; i < size; i++) assert.notEqual(SLOT_STRIP[i], SLOT_STRIP[(i + 1) % size]);
+});
+
+test("slots: líneas ganadoras", () => {
+  const column = (top: SlotSymbol, middle: SlotSymbol, bottom: SlotSymbol) => [top, middle, bottom];
+  // Centro: 3 sietes. Arriba: 2 limones. Abajo: nada. V: limón-siete-campana. V invertida: campana-siete-limón.
+  const reels = [
+    column("lemon", "seven", "bell"),
+    column("lemon", "seven", "cherry"),
+    column("star", "seven", "orange"),
+    column("bell", "diamond", "star"),
+    column("lemon", "orange", "bell"),
+  ];
+  assert.deepEqual(slotWins(reels), [
+    { line: 0, symbol: "seven", count: 3, pays: 100 },
+    { line: 1, symbol: "lemon", count: 2, pays: 2 },
+  ]);
+  // Pantalla llena del mismo símbolo: las cinco líneas pagan cinco iguales.
+  const full = Array.from({ length: 5 }, () => column("cherry", "cherry", "cherry"));
+  assert.equal(slotWins(full).length, 5);
+  // Una tirada: rejilla de 5×3 y multiplicador = pagos ÷ 5.
+  const spin = playSlots(() => 0);
+  assert.equal(spin.reels.length, 5);
+  assert.ok(spin.reels.every((reel) => reel.length === 3));
+  assert.equal(spin.multiplier, spin.wins.reduce((sum, win) => sum + win.pays, 0) / 5);
+  // Los cinco rodillos paran igual: pagan las tres líneas horizontales.
+  assert.equal(spin.wins.length, 3);
 });
 
 test("minas: multiplicadores y retorno", () => {

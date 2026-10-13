@@ -1,9 +1,12 @@
+import * as Haptics from 'expo-haptics';
 import { useCallback, useState, type PropsWithChildren, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { SvgXml } from 'react-native-svg';
 
 import { Button, Card, ErrorText, Field, Muted, Row, Screen } from '@/components/ui';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { api, errorCode } from '@/lib/api';
+import { chipFor } from '@/lib/art';
 import { errorMessage } from '@/lib/errors';
 import { money, parseAmount, usdt } from '@/lib/format';
 import type { GameId, GameResponse } from '@/lib/games';
@@ -83,14 +86,51 @@ export function Outcome({ payout, bet, pending, idle }: { payout?: number; bet?:
   );
 }
 
-type GameScreenProps = PropsWithChildren<{ controls: ReactNode; rules: string; error?: string }>;
+/** One of the drawings of lib/art.ts. */
+export function Art({ source, size }: { source: string; size: number }) {
+  return <SvgXml xml={source} width={size} height={size} />;
+}
+
+/** A casino chip with its value on it. */
+export function Chip({ amount, size = 36 }: { amount: number; size?: number }) {
+  const chip = chipFor(amount);
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: chip.color,
+        borderWidth: Math.max(2, size * 0.09),
+        borderColor: chip.edge,
+        borderStyle: 'dashed',
+      }}>
+      <Text style={{ color: '#FFFFFF', fontSize: size * 0.3, fontWeight: '900' }}>
+        {amount >= 1000 ? `${Math.round(amount / 100) / 10}k` : String(Math.round(amount * 100) / 100)}
+      </Text>
+    </View>
+  );
+}
+
+/** Vibration feedback; the app's stand-in for the sounds of the web version. */
+export const feel = {
+  tap: () => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}),
+  thud: () => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {}),
+  /** End of a round, by how much it paid compared with the bet. */
+  outcome: (payout: number, bet: number) =>
+    void Haptics.notificationAsync(payout > bet ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error).catch(() => {}),
+};
+
+type GameScreenProps = PropsWithChildren<{ controls: ReactNode; rules: string; error?: string; stageColor?: string }>;
 
 /** Layout of a game: the table on top, the controls under it. */
-export function GameScreen({ children, controls, rules, error }: GameScreenProps) {
+export function GameScreen({ children, controls, rules, error, stageColor }: GameScreenProps) {
   const { settings } = useAccount();
   return (
     <Screen>
-      <View style={styles.stage}>{children}</View>
+      <View style={[styles.stage, stageColor ? { backgroundColor: stageColor } : null]}>{children}</View>
       <Card>
         {controls}
         <ErrorText>{error}</ErrorText>
@@ -113,6 +153,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderWidth: 1,
     borderRadius: Radius.medium,
+    overflow: 'hidden',
   },
   small: { flex: 1, minHeight: 36 },
   problem: { color: Colors.gold, fontSize: 12 },
